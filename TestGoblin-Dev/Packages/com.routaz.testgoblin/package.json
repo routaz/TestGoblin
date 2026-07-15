@@ -1,0 +1,11 @@
+{
+  "name": "com.routaz.testgoblin",
+  "version": "0.1.0",
+  "displayName": "TestGoblin",
+  "description": "Unity test automation framework.",
+  "unity": "6000.0",
+  "author": { "name": "Routaz" },
+  "dependencies": {
+    "com.unity.test-framework": "1.6.0"
+  }
+}

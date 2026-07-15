@@ -1,0 +1,6 @@
+{
+    "name": "Routaz.TestGoblin.Editor",
+    "rootNamespace": "Routaz.TestGoblin.Editor",
+    "references": ["Routaz.TestGoblin"],
+    "includePlatforms": ["Editor"]
+}
