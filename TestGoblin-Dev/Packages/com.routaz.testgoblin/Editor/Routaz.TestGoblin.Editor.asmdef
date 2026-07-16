@@ -1,6 +1,18 @@
 {
     "name": "Routaz.TestGoblin.Editor",
     "rootNamespace": "Routaz.TestGoblin.Editor",
-    "references": ["Routaz.TestGoblin"],
-    "includePlatforms": ["Editor"]
+    "references": [
+        "Routaz.TestGoblin"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

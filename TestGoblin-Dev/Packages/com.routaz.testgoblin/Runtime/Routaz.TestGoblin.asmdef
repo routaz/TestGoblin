@@ -1,5 +1,14 @@
 {
     "name": "Routaz.TestGoblin",
-    "rootNamespace": "Routaz.TestGoblin",
-    "autoReferenced": true
+    "rootNamespace": "Routaz.TestGoblin.Runtime",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }
