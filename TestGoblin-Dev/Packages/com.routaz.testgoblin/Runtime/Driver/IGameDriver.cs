@@ -14,5 +14,6 @@ namespace Routaz.TestGoblin.Runtime.Driver
         Task<GoblinObject> FindObject(string name, int id = 0);
         Task Tap(GoblinObject goblinObject);
         Task Drag(GoblinObject sourceObject, GoblinObject destinationObject);
+        Task<string> GetText(GoblinObject goblinObject);
     }
 }

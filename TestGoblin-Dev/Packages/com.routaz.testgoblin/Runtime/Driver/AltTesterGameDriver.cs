@@ -57,6 +57,15 @@ namespace Routaz.TestGoblin.Runtime.Driver
             throw new NotImplementedException("Requires the AltTester SDK — see README 'What's actually verified'.");
         }
 
+        public Task<string> GetText(GoblinObject goblinObject)
+        {
+            /*
+                var testObject = _altDriver.FindObject(By.NAME, goblinObject.Name);
+                return testObject.GetText(); // TODO(verify): exact AltTester 2.x text getter
+            */
+            throw new NotImplementedException("Requires the AltTester SDK — see README 'What's actually verified'.");
+        }
+
         public Task WaitForCondition(Func<Task<bool>> condition, float timeout, int pollIntervalMs, string description)
         {
             return Waits.WaitForCondition(condition, timeout, pollIntervalMs, description);

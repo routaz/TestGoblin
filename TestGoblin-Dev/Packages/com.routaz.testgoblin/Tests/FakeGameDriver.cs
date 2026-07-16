@@ -25,12 +25,14 @@ namespace Routaz.TestGoblin.Tests
         {
             public string Name { get; }
             public bool Enabled { get; }
+            public string Text { get; }
             private readonly DateTime _availableAt;
 
-            public ScriptedObject(string name, bool enabled, int appearsAfterMs)
+            public ScriptedObject(string name, bool enabled, int appearsAfterMs, string text)
             {
                 Name = name;
                 Enabled = enabled;
+                Text = text;
                 _availableAt = DateTime.UtcNow.AddMilliseconds(appearsAfterMs);
             }
 
@@ -76,6 +78,16 @@ namespace Routaz.TestGoblin.Tests
             return Task.FromResult<GoblinObject>(null);
         }
 
+        public Task<string> GetText(GoblinObject goblinObject)
+        {
+            if (!_scriptedObjects.TryGetValue(goblinObject.Name, out ScriptedObject scripted) || !scripted.IsAvailable)
+            {
+                throw new InvalidOperationException($"Cannot read text of '{goblinObject.Name}' — it is not currently available.");
+            }
+
+            return Task.FromResult(scripted.Text);
+        }
+
         public Task Tap(GoblinObject goblinObject)
         {
             if (!_scriptedObjects.TryGetValue(goblinObject.Name, out ScriptedObject scripted) || !scripted.IsAvailable)
@@ -111,9 +123,9 @@ namespace Routaz.TestGoblin.Tests
                 defaultTimeout, defaultPollInterval, $"object '{name}' to disappear");
         }
 
-        public void ScriptObject(string name, int appearsAfterMs = 0, bool enabled = true)
+        public void ScriptObject(string name, int appearsAfterMs = 0, bool enabled = true, string text = "")
         {
-            _scriptedObjects[name] = new ScriptedObject(name, enabled, appearsAfterMs);
+            _scriptedObjects[name] = new ScriptedObject(name, enabled, appearsAfterMs, text);
         }
 
         public void RemoveScriptedObject(string name)

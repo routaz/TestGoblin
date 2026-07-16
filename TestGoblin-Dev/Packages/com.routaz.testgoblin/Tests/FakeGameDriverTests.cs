@@ -124,6 +124,27 @@ namespace Routaz.TestGoblin.Tests
         }
 
         [Test]
+        public async Task GetText_ObjectAvailable_ReturnsScriptedText()
+        {
+            var driver = new FakeGameDriver(defaultTimeout: 2f, defaultPollInterval: 50);
+            driver.ScriptObject("EnergyLevel", appearsAfterMs: 0, text: "3");
+            GoblinObject energyLabel = await driver.FindObject("EnergyLevel");
+
+            string text = await driver.GetText(energyLabel);
+
+            Assert.AreEqual("3", text);
+        }
+
+        [Test]
+        public async Task GetText_ObjectNotAvailable_Throws()
+        {
+            var driver = new FakeGameDriver(defaultTimeout: 2f, defaultPollInterval: 50);
+            var nonexistent = new GoblinObject { Name = "Nonexistent" };
+
+            await AssertThrowsAsync<InvalidOperationException>(() => driver.GetText(nonexistent));
+        }
+
+        [Test]
         public async Task FindObject_ObjectNotYetAvailable_ReturnsNull()
         {
             var driver = new FakeGameDriver(defaultTimeout: 2f, defaultPollInterval: 50);
