@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 
 
-namespace Routaz.TestGoblin.Runtime.Core
+namespace Routaz.TestGoblin.Runtime.Driver
 {
     public static class Waits
     {
@@ -11,11 +11,11 @@ namespace Routaz.TestGoblin.Runtime.Core
             float elapsed = 0f;
             while (elapsed < timeoutSeconds)
             {
-                if (await condition())
+                if (await condition().ConfigureAwait(false))
                 {
                     return;
                 }
-                await Task.Delay(pollIntervalMs);
+                await Task.Delay(pollIntervalMs).ConfigureAwait(false);
                 elapsed += pollIntervalMs / 1000f;
             }
             throw new TimeoutException($"Timed out after {timeoutSeconds}s waiting for {description}.");

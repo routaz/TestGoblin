@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 
-namespace Routaz.TestGoblin.Runtime.Core
+namespace Routaz.TestGoblin.Runtime.Driver
 {
     public interface IGameDriver
     {
