@@ -6,6 +6,7 @@
   "unity": "6000.0",
   "author": { "name": "Routaz" },
   "dependencies": {
-    "com.unity.test-framework": "1.6.0"
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.2"
   }
 }
