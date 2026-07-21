@@ -10,9 +10,10 @@ TestGoblin ships as a UPM package (`com.routaz.testgoblin`) developed inside a
 Unity 6 host project (`TestGoblin-Dev`).
 
 > **Status:** framework core is complete and green against an in-memory fake
-> driver. The real device/AltTester path is written but compile-stubbed (no SDK
-> installed yet). See [What's actually verified](#whats-actually-verified) for a
-> proven-vs-stubbed breakdown.
+> driver. The AltTester path is implemented and compiles against the real SDK
+> (2.3.2); the final live-scene run is pending a licensed AltTester Desktop
+> connection. See [What's actually verified](#whats-actually-verified) for the
+> full proven-vs-pending breakdown.
 
 ---
 
@@ -173,14 +174,19 @@ on the device tier. The two tiers are complementary; neither alone is sufficient
 | Config load + env-var override + validation | ✅ **Proven** — tested |
 | Screens / Flows driving the fake end-to-end (FTUE + daily-reward) | ✅ **Proven** — both tests assert *state* via the backend seam, green |
 | Backend seam (`IBackendTestApi`) | ✅ Fake impl proven; real HTTP impl stubbed |
-| `AltTesterGameDriver` (real device path) | ⚠️ **Stubbed** — written against best-known AltTester 2.x API, `TODO(verify)` markers, throws until the SDK is installed |
-| Live demo scene (framework driving a real uGUI scene) | ⛔ **Not built yet** (roadmap) |
+| `AltTesterGameDriver` (real AltTester path) | ✅ **Compiles against the real SDK (2.3.2)** — every AltTester API call verified by the compiler; gated behind `#if ALTTESTER_PRESENT` so the package stays usable without the SDK. Not yet exercised live (see below). |
+| Live demo scene (framework driving a real uGUI scene) | ⚠️ **Built + instrumented** — a uGUI demo scene exists, is AltTester-instrumented, and the framework is wired to drive it. The live run is **gated on an AltTester Desktop license** (the 2.x broker requires one to connect). |
 | Device / standalone execution tiers | ⛔ **Stubbed** in CI |
 
-This section is deliberately blunt: the fake driver is real and green; the
-live-scene proof and real device path are on the roadmap. The `IGameDriver` seam
-is what makes the fake driver meaningful — the code under test is identical
-regardless of which driver runs.
+This section is deliberately blunt about the one gap that remains: the AltTester
+driver is real, compiled code (not a guess) and the demo scene is built and
+instrumented — but AltTester 2.x routes the connection through AltTester Desktop,
+which needs a license, so the final "watch it click a real button" run is pending
+that. Everything up to the licensed connection is done and verified.
+
+The `IGameDriver` seam is what makes the fake driver meaningful — the code under
+test is identical regardless of which driver runs, which is also why the AltTester
+path could be built and compiled with confidence before ever connecting live.
 
 ---
 
