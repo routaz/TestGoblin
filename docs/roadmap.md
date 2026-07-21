@@ -4,20 +4,15 @@ Planned follow-up work, and concepts documented here rather than implemented yet
 Nothing below is required for the current framework to function — it's green and
 usable as-is against the fake driver.
 
-## Make the real driver real
+## Run the AltTester path live (pending a Desktop license)
 
-Install the AltTester SDK and flesh out `AltTesterGameDriver` (currently
-compile-stubbed with `TODO(verify)` markers where the exact 2.x API is uncertain).
-This is the single biggest step from "proven against a fake" to "proven against a
-live game."
-
-## Live demo scene
-
-A throwaway uGUI scene in the host project (a tutorial overlay, a draggable gem,
-an energy bar, a daily-reward popup) whose objects are named to match the Screen
-locators. The same Screen/Flow classes would then drive both the demo and, in
-principle, a real game — turning the "live scene" row in the README's verified
-matrix from a stub into a demonstrable ✓.
+`AltTesterGameDriver` is implemented and compiles against the real AltTester SDK
+(2.3.2), behind `#if ALTTESTER_PRESENT`. A uGUI demo scene is built and
+instrumented, with objects named to match the Screen locators, so the same
+Screen/Flow classes can drive it. The one remaining step is the live connection:
+AltTester 2.x routes the driver through AltTester Desktop, which requires a
+license. Once a (free-tier) license is available, a play-mode demo test can drive
+the scene end-to-end and flip the README's "live scene" row to a demonstrable ✓.
 
 ## Real backend test API
 
