@@ -30,6 +30,10 @@ it's accurate:
 - Support/boilerplate classes (`PlayerProfile`, `FakeBackendTestApi`) and small
   pieces like the `ScriptedObject` helper and a backing dictionary.
 - The CI workflow YAML.
+- The real `AltTesterGameDriver` implementation, once the SDK was installed — AI
+  looked up the AltTester 2.3.2 API from the docs and wrote the calls; the
+  compiler then verified every one against the installed assembly (I fixed the
+  namespace and added the missing driver-assembly reference).
 - First drafts of the docs (this README, roadmap, these design notes), which I
   edited for wording, scope, and accuracy.
 
@@ -53,6 +57,11 @@ it's accurate:
 - Dependency Inversion / the driver seam; the Page Object pattern and locator
   discipline; explicit waits vs. `Thread.Sleep`.
 - AltTester vs. Appium for Unity; GPL-3 vs. commercial licensing for an embedded SDK.
+- Optional dependencies in UPM: gating the AltTester driver behind an asmdef
+  Version Define + `#if ALTTESTER_PRESENT`, so the package compiles with or without
+  the SDK. Also: adapting AltTester's synchronous API to the async `IGameDriver`
+  contract with `Task.Run`, and why that's safe only because AltTester is
+  out-of-process.
 - `string.Format` vs. interpolation for const locator templates; BDD/Gherkin
   (flagged as something to learn properly before adopting — see the roadmap).
 
