@@ -222,5 +222,5 @@ regardless of which driver runs.
 - A demo uGUI scene the framework drives live (the "proof level 2" artifact).
 - Real HTTP-backed `IBackendTestApi`.
 - `[Category("Smoke")]` tagging so tiers run different subsets.
-- Scenario runner — a JSON keyword layer over Flows for manual QA (see
-  `docs/roadmap.md`).
+
+See [`docs/roadmap.md`](docs/roadmap.md) for the fuller list.
