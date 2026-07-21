@@ -97,3 +97,6 @@ ServerData/
 
 # Auto-generated cache in Assets folder
 **/[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Mentor/case-study working notes — kept local, never published
+CLAUDE.md
