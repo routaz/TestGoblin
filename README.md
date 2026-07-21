@@ -100,13 +100,6 @@ obligations. A paid subscription grants a non-GPL license, so it's effectively
 **mandatory for a commercial title regardless of budget**. A free "Lite" tier
 exists only for very small studios, so most commercial studios must pay.
 
-The commercial cost model matters more than the exact figure (check current
-rates directly): it's a **per-seat subscription plus a parallel-connection
-add-on**, and it scales with **seats and parallelism, not with the number of
-titles**. For a large multi-title studio, the number to watch is the
-parallel-connection add-on for nightly regression across many games — not
-per-title licensing.
-
 ---
 
 ## How TestGoblin hooks into Unity
