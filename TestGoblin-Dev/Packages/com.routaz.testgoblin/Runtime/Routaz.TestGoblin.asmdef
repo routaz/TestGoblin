@@ -1,7 +1,10 @@
 {
     "name": "Routaz.TestGoblin",
     "rootNamespace": "Routaz.TestGoblin.Runtime",
-    "references": [],
+    "references": [
+        "GUID:eee039289058c11488eadb061b907256",
+        "GUID:65a29c49e7f0a114b9b037bdd900b22d"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
@@ -9,6 +12,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.alttester.sdk",
+            "expression": "1.0.0",
+            "define": "ALTTESTER_PRESENT"
+        }
+    ],
     "noEngineReferences": false
 }
