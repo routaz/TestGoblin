@@ -1,0 +1,14 @@
+{
+    "name": "DemoGame.Adventure.Editor",
+    "rootNamespace": "DemoGame.Adventure.Editor",
+    "references": [ "DemoGame.Adventure" ],
+    "includePlatforms": [ "Editor" ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

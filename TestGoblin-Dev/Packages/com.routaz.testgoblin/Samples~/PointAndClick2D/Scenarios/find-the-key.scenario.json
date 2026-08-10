@@ -1,0 +1,12 @@
+{
+  "name": "Player signs in, finds the key and opens the door",
+  "description": "Signs in and waits out loading, picks up the key from the room, uses it on the door, and checks the door reports itself open.",
+  "scene": "PointAndClick",
+  "inputBackend": "Physics2D",
+  "steps": [
+    { "action": "SignIn", "arguments": { "maxLoadingSeconds": 3.0 } },
+    { "action": "PickUp", "arguments": { "item": "Key" } },
+    { "action": "UseItemOn", "arguments": { "item": "Key", "target": "Door" } },
+    { "action": "AssertDoorState", "arguments": { "expected": "Open" } }
+  ]
+}

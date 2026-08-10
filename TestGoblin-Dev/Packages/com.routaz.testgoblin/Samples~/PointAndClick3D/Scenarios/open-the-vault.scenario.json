@@ -1,0 +1,15 @@
+{
+  "name": "Player retracts the wall, takes the key and opens the gate",
+  "description": "A mixed-technology game: the world is 3D meshes, the HUD is UI Toolkit. The key starts behind a wall — nothing in the game's rules forbids taking it, only the geometry does. The inventory is then opened to confirm the key is carried, and closed again before the gate can be reached.",
+  "scene": "Vault3D",
+  "inputBackend": "UiToolkit,Physics3D",
+  "steps": [
+    { "action": "PullLever", "arguments": {} },
+    { "action": "TakeKey", "arguments": {} },
+    { "action": "OpenInventory", "arguments": {} },
+    { "action": "AssertCarryingKey", "arguments": {} },
+    { "action": "CloseInventory", "arguments": {} },
+    { "action": "UnlockGate", "arguments": {} },
+    { "action": "AssertGateState", "arguments": { "expected": "Open" } }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+    "name": "DemoGame.Adventure.TestSupport",
+    "rootNamespace": "DemoGame.Adventure",
+    "references": [ "Routaz.TestGoblin" ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

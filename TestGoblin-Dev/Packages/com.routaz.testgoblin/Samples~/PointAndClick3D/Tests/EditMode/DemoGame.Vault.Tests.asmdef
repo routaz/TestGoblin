@@ -1,0 +1,20 @@
+{
+    "name": "DemoGame.Vault.Tests",
+    "rootNamespace": "DemoGame.Vault.Tests",
+    "references": [
+        "Routaz.TestGoblin",
+        "DemoGame.Vault",
+        "DemoGame.Vault.TestSupport",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [ "Editor" ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [ "nunit.framework.dll" ],
+    "autoReferenced": false,
+    "defineConstraints": [ "UNITY_INCLUDE_TESTS" ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

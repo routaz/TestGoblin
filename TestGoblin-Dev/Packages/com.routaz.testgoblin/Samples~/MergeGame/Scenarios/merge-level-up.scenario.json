@@ -1,0 +1,19 @@
+{
+  "name": "Player logs in, merges until a level-up is ready, then levels up",
+  "description": "Logs in and waits out loading, then spawns items until energy runs out, merges everything possible, refills energy and continues until the level-up button appears — then takes it.",
+  "scene": "MergeGame",
+  "steps": [
+    {
+      "action": "LogIn",
+      "arguments": { "maxLoadingSeconds": 3.0 }
+    },
+    {
+      "action": "PlayUntilLevelUpReady",
+      "arguments": { "maxRefills": 5 }
+    },
+    {
+      "action": "LevelUp",
+      "arguments": {}
+    }
+  ]
+}
