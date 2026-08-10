@@ -1,107 +1,115 @@
 # Example GitHub Actions pipeline for TestGoblin.
 #
-# Two tiers, both running the SAME test suite — only TestRunConfig changes
-# (via TESTGOBLIN_* env vars), which is the whole payoff of the config layer:
+# The interesting part is NOT this file — it is ci/run-suite.sh, which owns the
+# order the steps have to happen in and why. This workflow just supplies a Unity
+# and calls it, so the same sequence runs locally and in CI. A pipeline that
+# reimplemented the steps inline would drift from the script within a week.
 #
-#   1. PR smoke   — fast, cheap, no device farm. Runs the edit/play-mode tests
-#                   in the Unity editor (batch mode). Gates every pull request.
-#   2. Nightly    — full suite against a real device via a device provider.
-#                   Slower/costlier, so it runs on a schedule, not per-PR.
+# Two tiers, same suite, differing only by configuration:
 #
-# This file is illustrative: device-provider steps are schematic TODOs, and a
-# real Unity batch-mode run needs a Unity license (see the UNITY_* secrets).
+#   1. PR check  — everything in-process. No licence for a driver, no device
+#                  farm, no external app. Gates every pull request.
+#   2. Nightly   — the out-of-process tier against a real build on real
+#                  hardware. Schematic: AltTesterGameDriver currently ships as
+#                  an uncompiled example, so this tier does not run yet.
+#
+# A Unity licence is still required for batch mode (see the UNITY_* secrets).
 
 name: TestGoblin CI
 
 on:
-  pull_request: {}                 # tier 1: every PR
+  pull_request: {}
   schedule:
-    - cron: "0 3 * * *"            # tier 2: nightly at 03:00 UTC
-  workflow_dispatch:               # manual run, with a tier picker on the Actions page
+    - cron: "0 3 * * *"
+  workflow_dispatch:
     inputs:
       tier:
         description: "Which tier to run manually"
         type: choice
-        options: [smoke, nightly, both]
-        default: smoke
+        options: [pr, nightly, both]
+        default: pr
 
 jobs:
   # ----------------------------------------------------------------------------
-  # Tier 1 — PR smoke: Unity editor tests in batch mode.
+  # Tier 1 — in-process suite: unit tests, driver tests, and every scenario.
   # ----------------------------------------------------------------------------
-  pr-smoke:
+  in-process:
     if: >
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' &&
-       (github.event.inputs.tier == 'smoke' || github.event.inputs.tier == 'both'))
+       (github.event.inputs.tier == 'pr' || github.event.inputs.tier == 'both'))
     runs-on: ubuntu-latest
+
+    # Running inside the editor image means `Unity` is a real executable on PATH,
+    # so the same script CI runs is the one a developer runs locally. Pin the tag
+    # to the version in ProjectSettings/ProjectVersion.txt.
+    container:
+      image: unityci/editor:ubuntu-6000.0.23f1-linux-il2cpp-3
+
     env:
-      TESTGOBLIN_EXECUTION_TARGET: Editor      # -> FakeGameDriver / editor tests
+      UNITY: /opt/unity/Editor/Unity
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
 
-      # Cache the Unity Library folder to avoid a full reimport every run.
+      # Library is expensive to rebuild and safe to cache — it is derived state.
+      # Keyed on Packages so a dependency change invalidates it.
       - uses: actions/cache@v4
         with:
           path: TestGoblin-Dev/Library
           key: Library-${{ hashFiles('TestGoblin-Dev/Packages/**') }}
           restore-keys: Library-
 
-      # game-ci is the de-facto standard for Unity in CI. Runs EditMode +
-      # PlayMode tests headless in batch mode.
-      - name: Run Unity tests (batch mode)
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}   # TODO: provide via repo secret
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          projectPath: TestGoblin-Dev
-          testMode: all
-          artifactsPath: test-results
+      - name: Activate Unity licence
+        run: 'echo "TODO: activate via UNITY_LICENSE — see game-ci docs for the ulf flow"'
 
-      - name: Upload test results
+      # Imports samples, generates their scenes, installs their scenarios,
+      # exports the keyword catalog, then runs both test platforms.
+      - name: Run suite
+        run: |
+          chmod +x ci/run-suite.sh
+          ci/run-suite.sh
+
+      # Uploaded even on failure — the NUnit XML is how you find out WHICH
+      # scenario broke, and the Unity logs are where compile errors live.
+      - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pr-smoke-results
+          name: in-process-results
           path: test-results
 
   # ----------------------------------------------------------------------------
-  # Tier 2 — Nightly device run: full suite against a real device.
+  # Tier 2 — Nightly device run. Not yet operational.
   # ----------------------------------------------------------------------------
+  #
+  # The out-of-process driver ships as an uncompiled example, so there is nothing
+  # to run here yet. Kept as a sketch because the shape matters: the same
+  # scenarios, the same keywords, the same Screens — only the driver and the
+  # config differ. That is the claim the IGameDriver seam exists to make.
   nightly-device:
     if: >
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' &&
        (github.event.inputs.tier == 'nightly' || github.event.inputs.tier == 'both'))
     runs-on: ubuntu-latest
+
     env:
-      TESTGOBLIN_EXECUTION_TARGET: Device       # -> AltTesterGameDriver
+      TESTGOBLIN_EXECUTION_TARGET: Device        # -> the out-of-process driver
       TESTGOBLIN_ENVIRONMENT_NAME: staging
-      # Host/port/device id injected here rather than hardcoded in config.
-      TESTGOBLIN_ALT_TESTER_HOST: ${{ secrets.ALT_TESTER_HOST }}
-      TESTGOBLIN_ALT_TESTER_PORT: "13000"
+      TESTGOBLIN_DRIVER_HOST: ${{ secrets.DRIVER_HOST }}
+      TESTGOBLIN_DRIVER_PORT: "13000"
+
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      # TODO: build the instrumented (AltTester-enabled) debug player.
-      - name: Build instrumented debug player
-        run: 'echo "TODO: game-ci/unity-builder build of the AltTester debug APK"'
+      - name: Build instrumented player
+        run: 'echo "TODO: build a player carrying the out-of-process SDK"'
 
-      # TODO: hand the build to a device provider (BrowserStack / Firebase Test
-      # Lab / self-hosted lab), boot it, forward the AltTester port, run tests
-      # with TESTGOBLIN_EXECUTION_TARGET=Device.
       - name: Run suite on device provider
-        run: 'echo "TODO: upload build + run NUnit/AltTester suite against a real device"'
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-device-results
-          path: test-results
+        run: 'echo "TODO: upload build, forward the driver port, run with EXECUTION_TARGET=Device"'
