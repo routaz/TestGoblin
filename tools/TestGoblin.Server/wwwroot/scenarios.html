@@ -94,8 +94,8 @@
           <textarea id="scenarioDescription" rows="2"></textarea>
         </label>
         <label class="field">
-          <span>Scene to load (must be in Build Settings; blank uses whatever is loaded)</span>
-          <input type="text" id="scenarioScene" placeholder="DemoGame">
+          <span>Scene to load (from Build Settings; blank uses whatever is loaded)</span>
+          <select id="scenarioScene"></select>
         </label>
       </fieldset>
 
@@ -148,6 +148,10 @@
         updateValidation();
       });
     }
+
+    // Re-render on change so a stale scene entry disappears the moment it is replaced,
+    // rather than lingering in the list until the next time a scenario is opened.
+    el('scenarioScene').addEventListener('change', renderSceneOptions);
 
     await loadCatalog();
     await loadFiles();
@@ -234,10 +238,43 @@
     el('editor').hidden = false;
     el('scenarioName').value = scenario.name;
     el('scenarioDescription').value = scenario.description;
-    el('scenarioScene').value = scenario.scene;
+    renderSceneOptions();
     el('delete').disabled = currentFile === null;
     renderSteps();
     renderFileList();
+  }
+
+  /// Fills the scene dropdown from the catalog, keeping whatever the scenario already names.
+  ///
+  /// The keeping matters more than the filling. A plain dropdown silently discards a value
+  /// it does not recognise, so opening a scenario that names a deleted scene would quietly
+  /// blank the field — turning a visibly broken scenario into a subtly different one. An
+  /// unrecognised scene stays selected and stays labelled, so it remains someone's problem
+  /// until they fix it.
+  function renderSceneOptions() {
+    const select = el('scenarioScene');
+    const scenes = (catalog && catalog.scenes) || [];
+    const current = scenario.scene || '';
+
+    const options = [option('', '— use whatever is loaded —')];
+
+    for (const scene of scenes) {
+      options.push(option(scene, scene));
+    }
+
+    if (current && !scenes.includes(current)) {
+      options.push(option(current, `${current} — not in Build Settings`));
+    }
+
+    select.replaceChildren(...options);
+    select.value = current;
+  }
+
+  function option(value, label) {
+    const element = document.createElement('option');
+    element.value = value;
+    element.textContent = label;
+    return element;
   }
 
   function addStep() {
@@ -441,6 +478,15 @@
       problems.push('A scenario needs at least one step.');
     }
 
+    // Guarded on the catalog having reported scenes at all: if the export is missing or
+    // predates this field, an empty list means "unknown", not "no scenes exist", and
+    // blocking every save on that would be worse than not checking.
+    const scenes = (catalog && catalog.scenes) || [];
+
+    if (scenario.scene && scenes.length > 0 && !scenes.includes(scenario.scene)) {
+      problems.push(`Scene "${scenario.scene}" is not in Build Settings, so this scenario cannot load it.`);
+    }
+
     scenario.steps.forEach((step, index) => {
       const number = index + 1;
 
@@ -532,19 +578,30 @@
     return true;
   }
 
-  /// Saves, then runs the PlayMode suite and reports back the result for THIS scenario.
+  /// Saves, then runs THIS scenario and reports the result.
   /// Authoring and finding out whether it works should not be two different pages.
+  ///
+  /// Narrowed to the one scenario via the server's filter. Running the whole PlayMode suite
+  /// to learn about a single case meant waiting on every other scenario and every driver
+  /// test — the answer was always there, just several minutes late.
   async function saveAndRun() {
     if (!await save()) {
       return;
     }
 
     const fileName = currentFile;
-    setRunStatus('running', 'Starting Unity (PlayMode)… this takes a minute or two.');
+    setRunStatus('running', `Starting Unity for ${fileName}… this takes a minute or two.`);
 
     try {
-      const response = await fetch('/api/runs?platform=PlayMode', { method: 'POST' });
+      const url = `/api/runs?platform=PlayMode&scenario=${encodeURIComponent(fileName)}`;
+      const response = await fetch(url, { method: 'POST' });
       const run = await response.json();
+
+      if (!response.ok) {
+        setRunStatus('failed', run.error || 'The run was refused.');
+        return;
+      }
+
       pollRun(run.id, fileName);
     } catch (error) {
       setRunStatus('failed', `Could not start a run: ${error.message}`);
@@ -566,14 +623,14 @@
       return;
     }
 
-    // A PlayMode run executes every scenario plus the driver tests. The author cares
-    // about the one they just wrote, so pick it out by file name.
+    // The run was filtered to this scenario, so its case should be the only one here.
+    // Still matched by name rather than taken as cases[0]: if the filter ever stops
+    // selecting what we think it does, this reports that instead of quietly showing
+    // some other test's result under this scenario's name.
     const mine = (run.cases || []).find(testCase => testCase.name.includes(fileName));
 
     if (!mine) {
-      setRunStatus('failed',
-        `The run finished but produced no test case for ${fileName}. ` +
-        'Unity discovers scenarios at startup, so a brand-new file needs one more run.');
+      setRunStatus('failed', `The run finished but produced no test case for ${fileName}.`);
       return;
     }
 

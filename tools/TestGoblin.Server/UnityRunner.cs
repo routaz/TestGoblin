@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace TestGoblin.Server;
 
@@ -39,6 +40,11 @@ public sealed class TestRun
 
     /// <summary>Which Unity test platform was requested (EditMode or PlayMode).</summary>
     public required string TestPlatform { get; init; }
+
+    /// <summary>
+    /// The single scenario this run was narrowed to, or null when the whole suite ran.
+    /// </summary>
+    public string? ScenarioFile { get; init; }
 
     /// <summary>Current lifecycle state.</summary>
     public RunState State { get; set; } = RunState.Running;
@@ -86,11 +92,23 @@ public sealed class UnityRunner
     }
 
     /// <summary>
+    /// Fully-qualified name of the fixture that turns scenario files into test cases.
+    /// </summary>
+    /// <remarks>
+    /// Hardcoded because it is the one test the package ships, and its name is part of
+    /// TestGoblin's contract rather than something a consuming project chooses.
+    /// </remarks>
+    private const string ScenarioTestName = "Routaz.TestGoblin.Tests.PlayMode.ScenarioRunnerTests.Scenario";
+
+    /// <summary>
     /// Starts a Unity test run and returns immediately, without waiting for it to finish.
     /// </summary>
     /// <param name="testPlatform">"EditMode" or "PlayMode".</param>
+    /// <param name="scenarioFile">
+    /// Narrows the run to one scenario file. Null runs everything.
+    /// </param>
     /// <returns>A run whose state is Running, or Failed if Unity could not be launched.</returns>
-    public TestRun Start(string testPlatform)
+    public TestRun Start(string testPlatform, string? scenarioFile = null)
     {
         string id = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
         string runDirectory = Path.Combine(_options.RunsDirectory, id);
@@ -100,6 +118,7 @@ public sealed class UnityRunner
         {
             Id = id,
             TestPlatform = testPlatform,
+            ScenarioFile = scenarioFile,
             LogPath = Path.Combine(runDirectory, "unity.log"),
             ResultsPath = Path.Combine(runDirectory, "results.xml")
         };
@@ -132,6 +151,12 @@ public sealed class UnityRunner
         startInfo.ArgumentList.Add(Path.GetFullPath(run.ResultsPath));
         startInfo.ArgumentList.Add("-logFile");
         startInfo.ArgumentList.Add(Path.GetFullPath(run.LogPath));
+
+        if (scenarioFile is not null)
+        {
+            startInfo.ArgumentList.Add("-testFilter");
+            startInfo.ArgumentList.Add(ScenarioFilter(scenarioFile));
+        }
 
         Process process;
 
@@ -198,6 +223,17 @@ public sealed class UnityRunner
             // outcome — the results file is still written and still worth parsing.
             // Only a missing or malformed file is a genuine infrastructure failure.
             run.Results = NUnitResultParser.Parse(run.ResultsPath);
+
+            // A filter that matches nothing produces an empty, successful run — which reads
+            // as "your scenario passed". Treated as a failure so a filter that silently
+            // stopped working can never be mistaken for a green test.
+            if (run.ScenarioFile is not null && run.Results.Total == 0)
+            {
+                Fail(run, $"The run selected no tests for '{run.ScenarioFile}'. Either the file " +
+                          "was not on disk when Unity started, or it produced no test case.");
+                return;
+            }
+
             run.State = RunState.Completed;
 
             _logger.LogInformation(
@@ -208,6 +244,20 @@ public sealed class UnityRunner
         {
             Fail(run, $"{exception.Message} (Unity log: {run.LogPath})");
         }
+    }
+
+    /// <summary>
+    /// The <c>-testFilter</c> value selecting exactly one scenario's generated test case.
+    /// </summary>
+    /// <remarks>
+    /// Unity matches this as a regular expression against each test's full name, and the
+    /// generated name — <c>Scenario("my-case.scenario.json")</c> — is full of characters a
+    /// regex reads as syntax. The parentheses are the dangerous ones: left unescaped they
+    /// become a capture group, and the filter then matches nothing at all.
+    /// </remarks>
+    private static string ScenarioFilter(string scenarioFile)
+    {
+        return Regex.Escape($"{ScenarioTestName}(\"{scenarioFile}\")");
     }
 
     /// <summary>

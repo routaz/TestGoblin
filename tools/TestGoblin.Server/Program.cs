@@ -45,10 +45,21 @@ WebApplication app = builder.Build();
 
 // Serves wwwroot/index.html at "/".
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Never cache the UI. With no Cache-Control header browsers fall back to heuristic
+// caching and stop revalidating, so an edited page keeps rendering its old version —
+// which reads as "the change did not work" rather than "the browser did not ask".
+// These files are local and tiny; there is nothing to gain by caching them.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    }
+});
 
 // Starts a run and returns immediately — the browser polls GET /api/runs/{id}.
-app.MapPost("/api/runs", (UnityRunner runner, string? platform) =>
+app.MapPost("/api/runs", (UnityRunner runner, ScenarioStore store, string? platform, string? scenario) =>
 {
     string requested = platform ?? "EditMode";
 
@@ -61,7 +72,24 @@ app.MapPost("/api/runs", (UnityRunner runner, string? platform) =>
         return Results.BadRequest(new { error = $"Unknown test platform '{requested}'. Use EditMode or PlayMode." });
     }
 
-    TestRun run = runner.Start(requested);
+    if (!string.IsNullOrEmpty(scenario))
+    {
+        // Scenarios only exist as play-mode test cases, so filtering an EditMode run by one
+        // would select nothing and look like a scenario that produced no tests.
+        if (!string.Equals(requested, "PlayMode", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { error = "Scenarios run in PlayMode. Select the PlayMode suite to run one." });
+        }
+
+        // Checked against what is actually on disk, so a name that cannot possibly match
+        // fails in milliseconds instead of after a Unity startup and an empty result file.
+        if (!store.List().Contains(scenario, StringComparer.Ordinal))
+        {
+            return Results.BadRequest(new { error = $"No scenario named '{scenario}'." });
+        }
+    }
+
+    TestRun run = runner.Start(requested, string.IsNullOrEmpty(scenario) ? null : scenario);
     return Results.Accepted($"/api/runs/{run.Id}", ToResponse(run));
 });
 
@@ -227,6 +255,7 @@ static object ToResponse(TestRun run)
         id = run.Id,
         state = run.State.ToString(),
         testPlatform = run.TestPlatform,
+        scenarioFile = run.ScenarioFile,
         startedUtc = run.StartedUtc,
         finishedUtc = run.FinishedUtc,
         exitCode = run.ExitCode,

@@ -60,6 +60,10 @@
       <option value="EditMode">EditMode — framework unit tests</option>
       <option value="PlayMode">PlayMode — scene &amp; scenario tests</option>
     </select>
+    <label for="scenario">Scenario</label>
+    <select id="scenario">
+      <option value="">Everything in the suite</option>
+    </select>
     <button id="run">Run tests</button>
   </div>
 
@@ -75,17 +79,50 @@
 <script>
   const runButton = document.getElementById('run');
   const platformSelect = document.getElementById('platform');
+  const scenarioSelect = document.getElementById('scenario');
   const statusBox = document.getElementById('status');
   const table = document.getElementById('results');
   const tbody = table.querySelector('tbody');
 
   runButton.addEventListener('click', startRun);
+  platformSelect.addEventListener('change', syncScenarioSelect);
 
-  // Both controls move together: changing the suite mid-run would misrepresent
-  // what is actually executing.
+  // Every control moves together: changing the suite or the scenario mid-run would
+  // misrepresent what is actually executing.
   function setBusy(busy) {
     runButton.disabled = busy;
     platformSelect.disabled = busy;
+    scenarioSelect.disabled = busy || platformSelect.value !== 'PlayMode';
+  }
+
+  // Scenarios are play-mode test cases, so the selector is meaningless for EditMode.
+  // Reset rather than merely disable: a hidden selection that silently applies again
+  // when you switch back is how you end up running something you did not choose.
+  function syncScenarioSelect() {
+    if (platformSelect.value !== 'PlayMode') {
+      scenarioSelect.value = '';
+    }
+
+    scenarioSelect.disabled = runButton.disabled || platformSelect.value !== 'PlayMode';
+  }
+
+  // The scenario list comes from disk, not from the last run: a scenario saved in the
+  // other tab should be runnable here without anything having executed yet.
+  async function loadScenarios() {
+    try {
+      const body = await (await fetch('/api/scenarios')).json();
+
+      for (const file of body.files) {
+        const option = document.createElement('option');
+        option.value = file;
+        option.textContent = file;
+        scenarioSelect.append(option);
+      }
+    } catch {
+      // Leave the selector with only "Everything in the suite" — still fully usable.
+    }
+
+    syncScenarioSelect();
   }
 
   // One connection held open for the lifetime of this tab. That IS the liveness
@@ -98,7 +135,10 @@
   // The server, not the page, owns run state — so on load we ask what is already
   // happening instead of assuming nothing is. Without this, reloading during a run
   // shows "No run yet" while Unity is still going.
-  restore();
+  //
+  // Sequenced after the scenario list on purpose: restore() selects the scenario the
+  // running run was narrowed to, and cannot select an option that does not exist yet.
+  loadScenarios().then(restore);
 
   async function restore() {
     try {
@@ -111,12 +151,15 @@
       // Newest first, so runs[0] is the one worth showing.
       const latest = runs[0];
 
-      // Reflect the suite that actually ran, so a reload does not show results
-      // from one suite next to a selector claiming the other.
+      // Reflect what actually ran, so a reload does not show results from one suite
+      // next to selectors claiming something else.
       platformSelect.value = latest.testPlatform;
+      scenarioSelect.value = latest.scenarioFile || '';
 
       if (latest.state === 'Running') {
         setBusy(true);
+      } else {
+        syncScenarioSelect();
       }
 
       // poll() already handles all three states: keep polling, render, or report.
@@ -128,15 +171,30 @@
 
   async function startRun() {
     const platform = platformSelect.value;
+    const scenario = scenarioSelect.value;
 
     setBusy(true);
     table.hidden = true;
     tbody.replaceChildren();
-    setStatus('running', `Starting Unity (${platform})… this takes a minute or two.`);
+    setStatus('running',
+      `Starting Unity (${scenario || platform})… this takes a minute or two.`);
 
     try {
-      const response = await fetch(`/api/runs?platform=${encodeURIComponent(platform)}`, { method: 'POST' });
+      let url = `/api/runs?platform=${encodeURIComponent(platform)}`;
+
+      if (scenario) {
+        url += `&scenario=${encodeURIComponent(scenario)}`;
+      }
+
+      const response = await fetch(url, { method: 'POST' });
       const run = await response.json();
+
+      if (!response.ok) {
+        setStatus('failed', run.error || 'The run was refused.');
+        setBusy(false);
+        return;
+      }
+
       poll(run.id);
     } catch (error) {
       setStatus('failed', `Could not reach the server: ${error.message}`);
@@ -150,7 +208,7 @@
 
     if (run.state === 'Running') {
       const seconds = Math.round((Date.now() - new Date(run.startedUtc)) / 1000);
-      setStatus('running', `Unity is running ${run.testPlatform}… ${seconds}s elapsed.`);
+      setStatus('running', `Unity is running ${describe(run)}… ${seconds}s elapsed.`);
       setTimeout(() => poll(id), 2000);
       return;
     }
@@ -174,7 +232,7 @@
     const state = summary.failed > 0 ? 'failed' : 'passed';
 
     setStatus(state,
-      `${run.testPlatform}: ${summary.passed}/${summary.total} passed` +
+      `${describe(run)}: ${summary.passed}/${summary.total} passed` +
       (summary.failed ? `, ${summary.failed} failed` : '') +
       (summary.skipped ? `, ${summary.skipped} skipped` : '') +
       ` — ${summary.durationSeconds.toFixed(2)}s`);
@@ -206,6 +264,12 @@
     }
 
     table.hidden = false;
+  }
+
+  // What this run covered. A narrowed run says so everywhere it reports, so "1/1 passed"
+  // is never mistaken for a whole green suite.
+  function describe(run) {
+    return run.scenarioFile ? `${run.scenarioFile} (PlayMode)` : run.testPlatform;
   }
 
   function setStatus(kind, message) {

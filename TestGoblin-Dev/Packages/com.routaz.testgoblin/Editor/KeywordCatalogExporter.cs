@@ -92,6 +92,12 @@ namespace Routaz.TestGoblin.Editor
                     })
                 }),
 
+                // The scenes a scenario is allowed to name. Only Unity knows this list, and
+                // a scene that is not in it cannot be loaded by any scenario — so shipping it
+                // to the browser turns "I misremembered a scene name" from a failure that
+                // costs a full batch run into one the author cannot make in the first place.
+                scenes = ScenesInBuildSettings(),
+
                 // Surfaced so a malformed keyword is visible in the browser, not only in a
                 // test log. QA should be able to see that something is broken without
                 // needing anyone to read Unity's console for them.
@@ -109,6 +115,33 @@ namespace Routaz.TestGoblin.Editor
             File.WriteAllText(fullPath, JsonConvert.SerializeObject(catalog, Formatting.Indented));
 
             return fullPath;
+        }
+
+        /// <summary>
+        /// The scene names a scenario may load, in build-settings order.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Names rather than paths, because that is what <c>SceneManager.LoadScene</c> takes
+        /// and therefore what a scenario file has to contain.
+        /// </para>
+        /// <para>
+        /// Disabled entries are excluded: a scene present but unticked is not in the build and
+        /// fails to load exactly like one that was never added. Offering it would reproduce
+        /// the confusion this list exists to remove.
+        /// </para>
+        /// <para>
+        /// Reads the shared scene list. A project using a Build Profile that overrides that
+        /// list would need this to consult the active profile instead — worth knowing before
+        /// trusting the dropdown on a project set up that way.
+        /// </para>
+        /// </remarks>
+        private static string[] ScenesInBuildSettings()
+        {
+            return EditorBuildSettings.scenes
+                .Where(scene => scene.enabled)
+                .Select(scene => Path.GetFileNameWithoutExtension(scene.path))
+                .ToArray();
         }
 
         /// <summary>
