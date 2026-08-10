@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TestGoblin — Scenarios</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 72rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 0; }
+    .subtitle { opacity: 0.7; margin-top: 0.25rem; }
+    nav a { margin-right: 1rem; }
+    button { font: inherit; padding: 0.4rem 0.8rem; cursor: pointer; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+    input, select, textarea { font: inherit; padding: 0.35rem; }
+    input[type="text"], textarea { width: 100%; box-sizing: border-box; }
+    textarea { resize: vertical; }
+
+    .layout { display: grid; grid-template-columns: 16rem 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+    @media (max-width: 48rem) { .layout { grid-template-columns: 1fr; } }
+
+    .file-list { list-style: none; padding: 0; margin: 0.5rem 0; }
+    .file-list li { margin: 0.15rem 0; }
+    .file-list button {
+      width: 100%; text-align: left; background: none;
+      border: 1px solid transparent; border-radius: 4px;
+    }
+    .file-list button.active { border-color: currentColor; font-weight: 600; }
+
+    fieldset { border: 1px solid rgba(128,128,128,0.4); border-radius: 6px; margin: 0 0 1rem; }
+    legend { padding: 0 0.4rem; opacity: 0.75; font-size: 0.85rem; text-transform: uppercase; }
+    label.field { display: block; margin-bottom: 0.75rem; }
+    label.field > span { display: block; font-size: 0.85rem; opacity: 0.75; margin-bottom: 0.2rem; }
+
+    .step { border: 1px solid rgba(128,128,128,0.4); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
+    .step-header { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .step-number { opacity: 0.6; font-variant-numeric: tabular-nums; }
+    .step-header select { flex: 1; min-width: 12rem; }
+    .step-help { font-size: 0.85rem; opacity: 0.7; margin: 0.4rem 0 0; }
+    .args { margin-top: 0.6rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.6rem; }
+    .arg span { display: block; font-size: 0.8rem; opacity: 0.75; }
+    .arg .required { color: #dc322f; }
+
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    #message { margin: 1rem 0; padding: 0.75rem; border-left: 4px solid currentColor; }
+    #message.hidden { display: none; }
+    #message.ok { border-color: #2aa198; }
+    #message.error { border-color: #dc322f; }
+    #runStatus { margin: 1rem 0; padding: 0.75rem; border-left: 4px solid currentColor; }
+    #runStatus.hidden { display: none; }
+    #runStatus.running { border-color: #b58900; }
+    #runStatus.passed { border-color: #2aa198; }
+    #runStatus.failed { border-color: #dc322f; }
+    #runStatus pre { white-space: pre-wrap; font-size: 0.85em; margin: 0.4rem 0 0; }
+    #validation { border-left-color: #dc322f; }
+    .problems { border-left: 4px solid #b58900; padding: 0.5rem 0.75rem; margin: 1rem 0; font-size: 0.9rem; }
+    .problems ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>TestGoblin</h1>
+  <p class="subtitle">Compose test cases from keywords. No Unity editor, no C#.</p>
+  <nav><a href="/">← Run tests &amp; view results</a></nav>
+
+  <div id="message" class="hidden"></div>
+  <div id="problems" class="problems" hidden></div>
+
+  <div class="layout">
+    <aside>
+      <button id="new">New scenario</button>
+      <ul id="files" class="file-list"></ul>
+      <p id="directory" class="subtitle" style="font-size: 0.75rem; word-break: break-all;"></p>
+    </aside>
+
+    <main id="editor" hidden>
+      <fieldset>
+        <legend>Scenario</legend>
+        <label class="field">
+          <span>File name</span>
+          <input type="text" id="fileName" placeholder="my-case.scenario.json">
+        </label>
+        <label class="field">
+          <span>Name (shown as the test name)</span>
+          <input type="text" id="scenarioName" placeholder="New player completes the tutorial">
+        </label>
+        <label class="field">
+          <span>Description</span>
+          <textarea id="scenarioDescription" rows="2"></textarea>
+        </label>
+        <label class="field">
+          <span>Scene to load (must be in Build Settings; blank uses whatever is loaded)</span>
+          <input type="text" id="scenarioScene" placeholder="DemoGame">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Steps</legend>
+        <div id="steps"></div>
+        <button id="addStep">Add step</button>
+      </fieldset>
+
+      <div id="validation" class="problems" hidden></div>
+
+      <div class="actions">
+        <button id="save">Save</button>
+        <button id="saveRun">Save &amp; run</button>
+        <button id="delete">Delete</button>
+        <a href="/">All results →</a>
+      </div>
+
+      <div id="runStatus" class="hidden"></div>
+    </main>
+  </div>
+
+<script>
+  // Server-owned state, fetched on load. The page never invents a keyword.
+  let catalog = null;
+  let files = [];
+  let currentFile = null;
+
+  // The scenario being edited, in exactly the shape that gets written to disk.
+  let scenario = blankScenario();
+
+  const el = id => document.getElementById(id);
+
+  // Same liveness contract as the results page: the server exits when no tab is open.
+  new EventSource('/api/live');
+
+  init();
+
+  async function init() {
+    el('new').addEventListener('click', newScenario);
+    el('addStep').addEventListener('click', addStep);
+    el('save').addEventListener('click', save);
+    el('saveRun').addEventListener('click', saveAndRun);
+    el('delete').addEventListener('click', remove);
+    el('fileName').addEventListener('input', updateValidation);
+
+    for (const [id, key] of [['scenarioName','name'], ['scenarioDescription','description'], ['scenarioScene','scene']]) {
+      el(id).addEventListener('input', event => {
+        scenario[key] = event.target.value;
+        updateValidation();
+      });
+    }
+
+    await loadCatalog();
+    await loadFiles();
+  }
+
+  function blankScenario() {
+    return { name: '', description: '', scene: '', steps: [] };
+  }
+
+  async function loadCatalog() {
+    const response = await fetch('/api/keywords');
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      showMessage('error', body.error || 'Could not load the keyword catalog.');
+      return;
+    }
+
+    catalog = await response.json();
+
+    // A malformed keyword is visible here rather than only in a Unity log, so the
+    // person composing scenarios can see why an action they expected is missing.
+    if (catalog.problems && catalog.problems.length > 0) {
+      const list = catalog.problems.map(p => `<li>${escapeHtml(p)}</li>`).join('');
+      el('problems').innerHTML = `<strong>${catalog.problems.length} keyword(s) skipped:</strong><ul>${list}</ul>`;
+      el('problems').hidden = false;
+    }
+  }
+
+  async function loadFiles() {
+    const body = await (await fetch('/api/scenarios')).json();
+    files = body.files;
+    el('directory').textContent = body.directory;
+    renderFileList();
+  }
+
+  function renderFileList() {
+    el('files').replaceChildren(...files.map(name => {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.textContent = name;
+      button.className = name === currentFile ? 'active' : '';
+      button.addEventListener('click', () => open(name));
+      item.append(button);
+      return item;
+    }));
+  }
+
+  async function open(name) {
+    const response = await fetch(`/api/scenarios/${encodeURIComponent(name)}`);
+
+    if (!response.ok) {
+      showMessage('error', `Could not open ${name}.`);
+      return;
+    }
+
+    const loaded = await response.json();
+
+    scenario = {
+      name: loaded.name || '',
+      description: loaded.description || '',
+      scene: loaded.scene || '',
+      steps: (loaded.steps || []).map(step => ({
+        action: step.action || '',
+        arguments: step.arguments || {}
+      }))
+    };
+
+    currentFile = name;
+    el('fileName').value = name;
+    renderEditor();
+    clearMessage();
+  }
+
+  function newScenario() {
+    scenario = blankScenario();
+    currentFile = null;
+    el('fileName').value = '';
+    renderEditor();
+    clearMessage();
+  }
+
+  function renderEditor() {
+    el('editor').hidden = false;
+    el('scenarioName').value = scenario.name;
+    el('scenarioDescription').value = scenario.description;
+    el('scenarioScene').value = scenario.scene;
+    el('delete').disabled = currentFile === null;
+    renderSteps();
+    renderFileList();
+  }
+
+  function addStep() {
+    // Deliberately blank rather than the first keyword alphabetically: defaulting to an
+    // arbitrary action means every new step silently claims to do something.
+    scenario.steps.push({ action: '', arguments: {} });
+    renderSteps();
+  }
+
+  function renderSteps() {
+    el('steps').replaceChildren(...scenario.steps.map((step, index) => renderStep(step, index)));
+    updateValidation();
+  }
+
+  function renderStep(step, index) {
+    const container = document.createElement('div');
+    container.className = 'step';
+
+    const header = document.createElement('div');
+    header.className = 'step-header';
+
+    const number = document.createElement('span');
+    number.className = 'step-number';
+    number.textContent = `${index + 1}.`;
+    header.append(number);
+
+    const select = document.createElement('select');
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose an action…';
+    select.append(placeholder);
+
+    for (const keyword of (catalog ? catalog.keywords : [])) {
+      const option = document.createElement('option');
+      option.value = keyword.name;
+      option.textContent = keyword.name;
+      select.append(option);
+    }
+    select.value = step.action;
+    select.addEventListener('change', () => {
+      step.action = select.value;
+      // Arguments belong to the old keyword; keeping them would send the executor
+      // names the new action does not declare, which it rightly rejects.
+      step.arguments = {};
+      renderSteps();
+    });
+    header.append(select);
+
+    header.append(iconButton('↑', index === 0, () => move(index, -1)));
+    header.append(iconButton('↓', index === scenario.steps.length - 1, () => move(index, 1)));
+    header.append(iconButton('Remove', false, () => {
+      scenario.steps.splice(index, 1);
+      renderSteps();
+    }));
+
+    container.append(header);
+
+    if (!step.action) {
+      return container;
+    }
+
+    const keyword = findKeyword(step.action);
+
+    if (!keyword) {
+      const warning = document.createElement('p');
+      warning.className = 'step-help';
+      warning.textContent = `Unknown action "${step.action}" — it is not in the current catalog.`;
+      container.append(warning);
+      return container;
+    }
+
+    if (keyword.description) {
+      const help = document.createElement('p');
+      help.className = 'step-help';
+      help.textContent = keyword.description;
+      container.append(help);
+    }
+
+    if (keyword.parameters.length > 0) {
+      const args = document.createElement('div');
+      args.className = 'args';
+      for (const parameter of keyword.parameters) {
+        args.append(renderArgument(step, parameter));
+      }
+      container.append(args);
+    }
+
+    return container;
+  }
+
+  function renderArgument(step, parameter) {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'arg';
+
+    const caption = document.createElement('span');
+    caption.textContent = `${parameter.name} (${parameter.type})`;
+    if (!parameter.optional) {
+      const required = document.createElement('span');
+      required.className = 'required';
+      required.textContent = ' *';
+      caption.append(required);
+    }
+    wrapper.append(caption);
+
+    const current = parameter.name in step.arguments
+      ? step.arguments[parameter.name]
+      : parameter.defaultValue;
+
+    // One control per type, driven entirely by what the catalog reported.
+    let input;
+
+    if (parameter.type === 'enum') {
+      input = document.createElement('select');
+      for (const value of parameter.allowedValues || []) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        input.append(option);
+      }
+      input.value = current ?? (parameter.allowedValues || [''])[0];
+      input.addEventListener('change', () => {
+        step.arguments[parameter.name] = input.value;
+        updateValidation();
+      });
+    } else if (parameter.type === 'bool') {
+      input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = current === true;
+      input.addEventListener('change', () => {
+        step.arguments[parameter.name] = input.checked;
+        updateValidation();
+      });
+    } else if (parameter.type === 'int' || parameter.type === 'float') {
+      input = document.createElement('input');
+      input.type = 'number';
+      input.step = parameter.type === 'int' ? '1' : 'any';
+      input.value = current ?? '';
+      input.addEventListener('input', () => {
+        // Numbers must reach the file as JSON numbers, not strings.
+        step.arguments[parameter.name] = input.value === '' ? '' : Number(input.value);
+        updateValidation();
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.value = current ?? '';
+      input.addEventListener('input', () => {
+        step.arguments[parameter.name] = input.value;
+        updateValidation();
+      });
+    }
+
+    // Seed the model so a value the author never touched still gets written.
+    if (!(parameter.name in step.arguments)) {
+      if (parameter.type === 'bool') {
+        step.arguments[parameter.name] = current === true;
+      } else if (current !== null && current !== undefined) {
+        step.arguments[parameter.name] = current;
+      }
+    }
+
+    wrapper.append(input);
+    return wrapper;
+  }
+
+  function move(index, offset) {
+    const target = index + offset;
+    [scenario.steps[index], scenario.steps[target]] = [scenario.steps[target], scenario.steps[index]];
+    renderSteps();
+  }
+
+  function iconButton(label, disabled, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.disabled = disabled;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function findKeyword(name) {
+    return catalog ? catalog.keywords.find(keyword => keyword.name === name) : null;
+  }
+
+  /// Checks the scenario against the catalog — the same shape of rules ScenarioExecutor
+  /// applies at run time, but instant and without starting Unity. The executor stays
+  /// authoritative; this exists so a typo costs a second rather than a 90-second run.
+  function findProblems() {
+    const problems = [];
+
+    if (!el('fileName').value.trim()) {
+      problems.push('A file name is required.');
+    }
+
+    if (!scenario.name.trim()) {
+      problems.push('A scenario name is required — it becomes the test name.');
+    }
+
+    if (scenario.steps.length === 0) {
+      problems.push('A scenario needs at least one step.');
+    }
+
+    scenario.steps.forEach((step, index) => {
+      const number = index + 1;
+
+      if (!step.action) {
+        problems.push(`Step ${number}: choose an action.`);
+        return;
+      }
+
+      const keyword = findKeyword(step.action);
+
+      if (!keyword) {
+        problems.push(`Step ${number}: "${step.action}" is not in the catalog.`);
+        return;
+      }
+
+      for (const parameter of keyword.parameters) {
+        const value = step.arguments[parameter.name];
+        const missing = value === undefined || value === null || value === '';
+
+        if (missing) {
+          if (!parameter.optional) {
+            problems.push(`Step ${number}: "${parameter.name}" is required.`);
+          }
+          continue;
+        }
+
+        if ((parameter.type === 'int' || parameter.type === 'float') && Number.isNaN(Number(value))) {
+          problems.push(`Step ${number}: "${parameter.name}" must be a number.`);
+        }
+
+        if (parameter.type === 'enum' && !(parameter.allowedValues || []).includes(value)) {
+          problems.push(`Step ${number}: "${parameter.name}" must be one of ` +
+            `${(parameter.allowedValues || []).join(', ')}.`);
+        }
+      }
+    });
+
+    return problems;
+  }
+
+  function updateValidation() {
+    const problems = findProblems();
+    const box = el('validation');
+
+    if (problems.length === 0) {
+      box.hidden = true;
+      el('save').disabled = false;
+      el('saveRun').disabled = false;
+      return;
+    }
+
+    box.innerHTML = `<strong>Not runnable yet:</strong><ul>` +
+      problems.map(problem => `<li>${escapeHtml(problem)}</li>`).join('') + `</ul>`;
+    box.hidden = false;
+
+    // Blocking save is deliberate: an invalid scenario on disk becomes a failing test
+    // for someone else to debug.
+    el('save').disabled = true;
+    el('saveRun').disabled = true;
+  }
+
+  async function save() {
+    const problems = findProblems();
+
+    if (problems.length > 0) {
+      showMessage('error', problems[0]);
+      return false;
+    }
+
+    const fileName = el('fileName').value.trim();
+
+    const response = await fetch(`/api/scenarios/${encodeURIComponent(fileName)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scenario, null, 2)
+    });
+
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      showMessage('error', body.error || 'Save failed.');
+      return false;
+    }
+
+    currentFile = fileName;
+    await loadFiles();
+    renderFileList();
+    showMessage('ok', `Saved ${fileName}. It will appear as its own test on the next run.`);
+    return true;
+  }
+
+  /// Saves, then runs the PlayMode suite and reports back the result for THIS scenario.
+  /// Authoring and finding out whether it works should not be two different pages.
+  async function saveAndRun() {
+    if (!await save()) {
+      return;
+    }
+
+    const fileName = currentFile;
+    setRunStatus('running', 'Starting Unity (PlayMode)… this takes a minute or two.');
+
+    try {
+      const response = await fetch('/api/runs?platform=PlayMode', { method: 'POST' });
+      const run = await response.json();
+      pollRun(run.id, fileName);
+    } catch (error) {
+      setRunStatus('failed', `Could not start a run: ${error.message}`);
+    }
+  }
+
+  async function pollRun(id, fileName) {
+    const run = await (await fetch(`/api/runs/${id}`)).json();
+
+    if (run.state === 'Running') {
+      const seconds = Math.round((Date.now() - new Date(run.startedUtc)) / 1000);
+      setRunStatus('running', `Unity is running… ${seconds}s elapsed.`);
+      setTimeout(() => pollRun(id, fileName), 2000);
+      return;
+    }
+
+    if (run.state === 'Failed') {
+      setRunStatus('failed', run.error || 'The run could not complete.');
+      return;
+    }
+
+    // A PlayMode run executes every scenario plus the driver tests. The author cares
+    // about the one they just wrote, so pick it out by file name.
+    const mine = (run.cases || []).find(testCase => testCase.name.includes(fileName));
+
+    if (!mine) {
+      setRunStatus('failed',
+        `The run finished but produced no test case for ${fileName}. ` +
+        'Unity discovers scenarios at startup, so a brand-new file needs one more run.');
+      return;
+    }
+
+    if (mine.result === 'Passed') {
+      setRunStatus('passed', `${fileName} passed in ${mine.durationSeconds.toFixed(2)}s.`);
+      return;
+    }
+
+    setRunStatus('failed', `${fileName} ${mine.result.toLowerCase()}.`, mine.failureMessage);
+  }
+
+  function setRunStatus(kind, text, detail) {
+    const box = el('runStatus');
+    box.className = kind;
+    box.textContent = text;
+
+    if (detail) {
+      const pre = document.createElement('pre');
+      pre.textContent = detail;
+      box.append(pre);
+    }
+  }
+
+  async function remove() {
+    if (!currentFile || !confirm(`Delete ${currentFile}?`)) {
+      return;
+    }
+
+    const response = await fetch(`/api/scenarios/${encodeURIComponent(currentFile)}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+      showMessage('error', 'Delete failed.');
+      return;
+    }
+
+    const deleted = currentFile;
+    newScenario();
+    await loadFiles();
+    showMessage('ok', `Deleted ${deleted}.`);
+  }
+
+  function showMessage(kind, text) {
+    el('message').className = kind;
+    el('message').textContent = text;
+  }
+
+  function clearMessage() {
+    el('message').className = 'hidden';
+    el('message').textContent = '';
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>

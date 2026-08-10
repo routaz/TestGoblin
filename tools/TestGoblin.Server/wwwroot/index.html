@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TestGoblin</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 60rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 0; }
+    .subtitle { opacity: 0.7; margin-top: 0.25rem; }
+    button {
+      font: inherit;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    button[disabled] { cursor: progress; opacity: 0.6; }
+    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .controls label { opacity: 0.7; font-size: 0.9rem; }
+    select { font: inherit; padding: 0.45rem; }
+    select[disabled] { opacity: 0.6; }
+    #status { margin: 1rem 0; padding: 0.75rem; border-left: 4px solid currentColor; }
+    #status.idle { opacity: 0.6; }
+    #status.running { border-color: #b58900; }
+    #status.passed { border-color: #2aa198; }
+    #status.failed { border-color: #dc322f; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.3); }
+    th { font-size: 0.85rem; text-transform: uppercase; opacity: 0.7; }
+    td.result { font-weight: 600; white-space: nowrap; }
+    td.result.Passed { color: #2aa198; }
+    td.result.Failed { color: #dc322f; }
+    td.result.Skipped { opacity: 0.6; }
+    td.duration { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .class-name { opacity: 0.6; font-size: 0.85em; display: block; }
+    pre.failure {
+      margin: 0.5rem 0 0;
+      padding: 0.5rem;
+      background: rgba(220, 50, 47, 0.12);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <h1>TestGoblin</h1>
+  <p class="subtitle">Run the Unity test suite headlessly and read the results here.</p>
+  <nav><a href="/scenarios.html">Build scenarios →</a></nav>
+
+  <div class="controls">
+    <label for="platform">Suite</label>
+    <select id="platform">
+      <option value="EditMode">EditMode — framework unit tests</option>
+      <option value="PlayMode">PlayMode — scene &amp; scenario tests</option>
+    </select>
+    <button id="run">Run tests</button>
+  </div>
+
+  <div id="status" class="idle">No run yet.</div>
+
+  <table id="results" hidden>
+    <thead>
+      <tr><th>Test</th><th>Result</th><th>Duration</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  const runButton = document.getElementById('run');
+  const platformSelect = document.getElementById('platform');
+  const statusBox = document.getElementById('status');
+  const table = document.getElementById('results');
+  const tbody = table.querySelector('tbody');
+
+  runButton.addEventListener('click', startRun);
+
+  // Both controls move together: changing the suite mid-run would misrepresent
+  // what is actually executing.
+  function setBusy(busy) {
+    runButton.disabled = busy;
+    platformSelect.disabled = busy;
+  }
+
+  // One connection held open for the lifetime of this tab. That IS the liveness
+  // signal — closing the tab drops it and the server exits a few seconds later.
+  // Deliberately not a setInterval ping: browsers throttle timers in hidden tabs,
+  // which would make a backgrounded tab look closed. EventSource also reconnects
+  // by itself, so a page reload just re-establishes it.
+  new EventSource('/api/live');
+
+  // The server, not the page, owns run state — so on load we ask what is already
+  // happening instead of assuming nothing is. Without this, reloading during a run
+  // shows "No run yet" while Unity is still going.
+  restore();
+
+  async function restore() {
+    try {
+      const runs = await (await fetch('/api/runs')).json();
+
+      if (runs.length === 0) {
+        return;
+      }
+
+      // Newest first, so runs[0] is the one worth showing.
+      const latest = runs[0];
+
+      // Reflect the suite that actually ran, so a reload does not show results
+      // from one suite next to a selector claiming the other.
+      platformSelect.value = latest.testPlatform;
+
+      if (latest.state === 'Running') {
+        setBusy(true);
+      }
+
+      // poll() already handles all three states: keep polling, render, or report.
+      poll(latest.id);
+    } catch {
+      // Server not reachable yet; the page is still usable once it is.
+    }
+  }
+
+  async function startRun() {
+    const platform = platformSelect.value;
+
+    setBusy(true);
+    table.hidden = true;
+    tbody.replaceChildren();
+    setStatus('running', `Starting Unity (${platform})… this takes a minute or two.`);
+
+    try {
+      const response = await fetch(`/api/runs?platform=${encodeURIComponent(platform)}`, { method: 'POST' });
+      const run = await response.json();
+      poll(run.id);
+    } catch (error) {
+      setStatus('failed', `Could not reach the server: ${error.message}`);
+      setBusy(false);
+    }
+  }
+
+  // Unity runs for minutes, so the browser polls rather than holding a request open.
+  async function poll(id) {
+    const run = await (await fetch(`/api/runs/${id}`)).json();
+
+    if (run.state === 'Running') {
+      const seconds = Math.round((Date.now() - new Date(run.startedUtc)) / 1000);
+      setStatus('running', `Unity is running ${run.testPlatform}… ${seconds}s elapsed.`);
+      setTimeout(() => poll(id), 2000);
+      return;
+    }
+
+    setBusy(false);
+
+    if (run.state === 'Failed') {
+      setStatus('failed', `${run.error}`);
+      return;
+    }
+
+    render(run);
+  }
+
+  function render(run) {
+    // Idempotent: restore() and startRun() can both land here, and rendering
+    // twice should replace the table rather than append a second copy of it.
+    tbody.replaceChildren();
+
+    const summary = run.summary;
+    const state = summary.failed > 0 ? 'failed' : 'passed';
+
+    setStatus(state,
+      `${run.testPlatform}: ${summary.passed}/${summary.total} passed` +
+      (summary.failed ? `, ${summary.failed} failed` : '') +
+      (summary.skipped ? `, ${summary.skipped} skipped` : '') +
+      ` — ${summary.durationSeconds.toFixed(2)}s`);
+
+    for (const testCase of run.cases) {
+      const row = tbody.insertRow();
+
+      const nameCell = row.insertCell();
+      nameCell.textContent = testCase.name;
+      const className = document.createElement('span');
+      className.className = 'class-name';
+      className.textContent = testCase.className;
+      nameCell.append(className);
+
+      if (testCase.failureMessage) {
+        const detail = document.createElement('pre');
+        detail.className = 'failure';
+        detail.textContent = testCase.failureMessage;
+        nameCell.append(detail);
+      }
+
+      const resultCell = row.insertCell();
+      resultCell.className = `result ${testCase.result}`;
+      resultCell.textContent = testCase.result;
+
+      const durationCell = row.insertCell();
+      durationCell.className = 'duration';
+      durationCell.textContent = `${testCase.durationSeconds.toFixed(3)}s`;
+    }
+
+    table.hidden = false;
+  }
+
+  function setStatus(kind, message) {
+    statusBox.className = kind;
+    statusBox.textContent = message;
+  }
+</script>
+</body>
+</html>
