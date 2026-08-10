@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Routaz.TestGoblin.Tests
+namespace Routaz.TestGoblin.Runtime.Driver
 {
     public class FakeGameDriver : IGameDriver
     {
@@ -39,7 +39,7 @@ namespace Routaz.TestGoblin.Tests
             public bool IsAvailable => DateTime.UtcNow >= _availableAt;
         }
 
-        public Task Connect(string deviceId, string altTesterHost, int altTesterPort)
+        public Task Connect()
         {
             return Task.CompletedTask; //Simulate a successful connection
         }

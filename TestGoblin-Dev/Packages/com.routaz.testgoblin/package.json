@@ -7,6 +7,24 @@
   "author": { "name": "Routaz" },
   "dependencies": {
     "com.unity.test-framework": "1.6.0",
-    "com.unity.nuget.newtonsoft-json": "3.2.2"
-  }
+    "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.ugui": "2.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Merge Game (uGUI)",
+      "description": "A login screen, a fake load, and a 4x4 merge board — driven by InProcessGameDriver. Import this if your game's interactive elements are uGUI widgets.",
+      "path": "Samples~/MergeGame"
+    },
+    {
+      "displayName": "Point and Click (2D sprites)",
+      "description": "Sign in, wait out a load, find a key and open a door — driven by PhysicsGameDriver. Import this if your game's clickable things are sprites with Collider2D.",
+      "path": "Samples~/PointAndClick2D"
+    },
+    {
+      "displayName": "Point and Click (3D meshes)",
+      "description": "A vault where the key sits behind a wall — driven by Physics3DGameDriver. Import this if your game's clickable things are 3D meshes with colliders, and to see how occlusion is caught.",
+      "path": "Samples~/PointAndClick3D"
+    }
+  ]
 }

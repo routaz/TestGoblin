@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Routaz.TestGoblin.Runtime.Backend;
 
-namespace Routaz.TestGoblin.Tests
+namespace Routaz.TestGoblin.Runtime.Backend
 {
     /// <summary>
     /// In-memory <see cref="IBackendTestApi"/> for proof-level-1 tests: seeds
