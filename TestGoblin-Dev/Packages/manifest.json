@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "com.alttester.sdk": "2.3.2",
     "com.unity.2d.animation": "13.0.4",
     "com.unity.2d.aseprite": "3.0.1",
     "com.unity.2d.psdimporter": "12.0.1",
@@ -55,13 +54,7 @@
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
   },
-  "scopedRegistries": [
-    {
-      "name": "OpenUPM",
-      "url": "https://package.openupm.com",
-      "scopes": [
-        "com.alttester"
-      ]
-    }
+  "testables": [
+    "com.routaz.testgoblin"
   ]
 }

@@ -1,29 +1,13 @@
 {
   "dependencies": {
-    "com.alttester.sdk": {
-      "version": "2.3.2",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.editorcoroutines": "1.0.0",
-        "com.unity.modules.physics": "1.0.0",
-        "com.unity.modules.physics2d": "1.0.0",
-        "com.unity.modules.screencapture": "1.0.0",
-        "com.unity.modules.ui": "1.0.0",
-        "com.unity.modules.unitywebrequest": "1.0.0",
-        "com.unity.nuget.newtonsoft-json": "3.1.0",
-        "com.unity.test-framework": "1.1.33",
-        "com.unity.ugui": "1.0.0"
-      },
-      "url": "https://package.openupm.com"
-    },
     "com.routaz.testgoblin": {
       "version": "file:com.routaz.testgoblin",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
         "com.unity.test-framework": "1.6.0",
-        "com.unity.nuget.newtonsoft-json": "3.2.2"
+        "com.unity.nuget.newtonsoft-json": "3.2.2",
+        "com.unity.ugui": "2.0.0"
       }
     },
     "com.unity.2d.animation": {
@@ -153,13 +137,6 @@
         "com.unity.nuget.mono-cecil": "1.11.5",
         "com.unity.test-framework.performance": "3.0.3"
       },
-      "url": "https://packages.unity.com"
-    },
-    "com.unity.editorcoroutines": {
-      "version": "1.0.1",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.ext.nunit": {
