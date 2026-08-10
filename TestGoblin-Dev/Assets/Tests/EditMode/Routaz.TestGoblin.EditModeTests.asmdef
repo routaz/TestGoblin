@@ -1,8 +1,10 @@
 {
-    "name": "Routaz.TestGoblin.Tests",
+    "name": "Routaz.TestGoblin.EditModeTests",
     "rootNamespace": "Routaz.TestGoblin.Tests",
     "references": [
         "Routaz.TestGoblin",
+        "DemoGame",
+        "DemoGame.TestSupport",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
@@ -15,8 +17,10 @@
     "precompiledReferences": [
         "nunit.framework.dll"
     ],
-    "autoReferenced": true,
-    "defineConstraints": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

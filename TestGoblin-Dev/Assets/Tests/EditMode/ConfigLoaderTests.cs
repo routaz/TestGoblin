@@ -34,8 +34,8 @@ namespace Routaz.TestGoblin.Tests
                 ""buildPath"": ""/builds/sugar-rush.apk"",
                 ""environmentName"": ""staging"",
                 ""backendBaseUrl"": ""http://staging.example.com"",
-                ""altTesterHost"": ""10.0.0.5"",
-                ""altTesterPort"": 13000,
+                ""driverHost"":""10.0.0.5"",
+                ""driverPort"":13000,
                 ""defaultTimeout"": 15.5,
                 ""defaultPollInterval"": 250
             }";
@@ -49,8 +49,8 @@ namespace Routaz.TestGoblin.Tests
             Assert.AreEqual("/builds/sugar-rush.apk", config.BuildPath);
             Assert.AreEqual("staging", config.EnvironmentName);
             Assert.AreEqual(new Uri("http://staging.example.com"), config.BackendBaseUrl);
-            Assert.AreEqual("10.0.0.5", config.AltTesterHost);
-            Assert.AreEqual(13000, config.AltTesterPort);
+            Assert.AreEqual("10.0.0.5", config.DriverHost);
+            Assert.AreEqual(13000, config.DriverPort);
             Assert.AreEqual(15.5f, config.DefaultTimeout);
             Assert.AreEqual(250, config.DefaultPollInterval);
         }
@@ -63,8 +63,8 @@ namespace Routaz.TestGoblin.Tests
                 ""platform"": ""Windows"",
                 ""deviceId"": ""json-device-id"",
                 ""backendBaseUrl"": ""http://localhost:5000"",
-                ""altTesterHost"": ""127.0.0.1"",
-                ""altTesterPort"": 13000
+                ""driverHost"":""127.0.0.1"",
+                ""driverPort"":13000
             }";
             File.WriteAllText(_tempJsonPath, json);
             Environment.SetEnvironmentVariable(DeviceIdEnvVar, "override-device-id");
@@ -80,8 +80,8 @@ namespace Routaz.TestGoblin.Tests
             const string json = @"{
                 ""executionTarget"": ""Editor"",
                 ""platform"": ""Windows"",
-                ""altTesterHost"": ""127.0.0.1"",
-                ""altTesterPort"": 13000
+                ""driverHost"":""127.0.0.1"",
+                ""driverPort"":13000
             }";
             File.WriteAllText(_tempJsonPath, json);
 

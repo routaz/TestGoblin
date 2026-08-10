@@ -6,8 +6,14 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/DemoGame.unity
-    guid: 48a58411c2842734383c930a6fc15fb6
+    path: Assets/Scenes/MergeGame.unity
+    guid: 5dcc4801cc19da14186cea3d9f9b3fc7
+  - enabled: 1
+    path: Assets/Scenes/PointAndClick.unity
+    guid: 2d24693c2d1246249be5b68d9de48f7a
+  - enabled: 1
+    path: Assets/Scenes/Vault3D.unity
+    guid: 342bd9f30f9a4c245822123e51e6d5f7
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
