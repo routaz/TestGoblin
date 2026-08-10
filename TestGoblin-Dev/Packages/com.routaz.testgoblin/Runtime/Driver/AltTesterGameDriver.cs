@@ -36,9 +36,17 @@ namespace Routaz.TestGoblin.Runtime.Driver
         }
 
 #if ALTTESTER_PRESENT
-        public Task Connect(string deviceId, string altTesterHost, int altTesterPort)
+        public Task Connect()
         {
-            return Task.Run(() => { _altDriver = new AltDriver(altTesterHost, altTesterPort); });
+            // Connection details come from the config this driver was constructed with,
+            // not from the interface — that is what keeps IGameDriver vendor-neutral.
+            if (string.IsNullOrEmpty(_config.DriverHost))
+            {
+                throw new InvalidOperationException(
+                    "DriverHost is required for AltTesterGameDriver but is missing from the configuration.");
+            }
+
+            return Task.Run(() => { _altDriver = new AltDriver(_config.DriverHost, _config.DriverPort); });
         }
 
         public Task Disconnect()
@@ -94,7 +102,7 @@ namespace Routaz.TestGoblin.Runtime.Driver
             });
         }
 #else
-        public Task Connect(string deviceId, string altTesterHost, int altTesterPort) => throw NotInstalled();
+        public Task Connect() => throw NotInstalled();
         public Task Disconnect() => throw NotInstalled();
         public Task<GoblinObject> FindObject(string name, int id = 0) => throw NotInstalled();
         public Task Tap(GoblinObject goblinObject) => throw NotInstalled();

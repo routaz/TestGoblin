@@ -38,8 +38,9 @@ namespace Routaz.TestGoblin.Runtime.Config
                 BuildPath = GetStringOrDefault("BUILD_PATH", config.BuildPath),
                 EnvironmentName = GetStringOrDefault("ENVIRONMENT_NAME", config.EnvironmentName),
                 BackendBaseUrl = GetUriOrDefault("BACKEND_BASE_URL", config.BackendBaseUrl),
-                AltTesterHost = GetStringOrDefault("ALT_TESTER_HOST", config.AltTesterHost),
-                AltTesterPort = GetIntOrDefault("ALT_TESTER_PORT", config.AltTesterPort),
+                InputBackend = GetEnumOrDefault("INPUT_BACKEND", config.InputBackend),
+                DriverHost = GetStringOrDefault("DRIVER_HOST", config.DriverHost),
+                DriverPort = GetIntOrDefault("DRIVER_PORT", config.DriverPort),
                 DefaultTimeout = GetFloatOrDefault("DEFAULT_TIMEOUT", config.DefaultTimeout),
                 DefaultPollInterval = GetIntOrDefault("DEFAULT_POLL_INTERVAL", config.DefaultPollInterval)
             };
@@ -53,10 +54,9 @@ namespace Routaz.TestGoblin.Runtime.Config
                 throw new InvalidOperationException("BackendBaseUrl is missing in the configuration.");
             }
 
-            if (string.IsNullOrEmpty(config.AltTesterHost))
-            {
-                throw new InvalidOperationException("AltTesterHost is missing in the configuration.");
-            }
+            // DriverHost is deliberately NOT required: the default in-process driver
+            // has nothing to connect to. A driver that needs a host validates its own
+            // configuration, because only it knows whether one is meaningful.
         }
 
         //HELPER METHODS

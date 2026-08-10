@@ -5,8 +5,8 @@
   "buildPath": "",
   "environmentName": "local",
   "backendBaseUrl": "http://localhost:5000",
-  "altTesterHost": "127.0.0.1",
-  "altTesterPort": 13000,
+  "driverHost": "127.0.0.1",
+  "driverPort": 13000,
   "defaultTimeout": 10.0,
   "defaultPollInterval": 500
 }
