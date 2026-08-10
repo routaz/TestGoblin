@@ -25,7 +25,9 @@ framework with an in-process default driver. Several changes are breaking; see
   yields one NUnit test case per file, with no code generation and no compile step.
 - **`KeywordCatalogExporter`** — writes `keywords.json` (names, parameters, types,
   defaults, enum values) for tooling to render. Menu item, batch-mode entry point,
-  or direct call.
+  or direct call. The catalog also lists the enabled scenes in Build Settings, so a
+  scenario author picks a scene from a list instead of remembering its name; only
+  Unity knows that list, and a scene missing from it cannot be loaded by any scenario.
 - **`GameDriverFactory`** — the config-to-driver mapping, previously buried in a test
   base class. This is what makes "switching targets changes config, never code" real.
 - **`ExecutionTarget.Fake`** — there was previously no way to *ask* for the fake
