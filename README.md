@@ -1,6 +1,6 @@
 # TestGoblin — a Unity test-automation framework manual QA can drive
 
-> ### ⚠️ This is a vibe-coded proof of concept
+> ### ⚠️ This is a proof of concept
 >
 > TestGoblin was built conversationally with an AI assistant over a handful of
 > sessions, as a personal learning project. It is not a product, it has no users,
@@ -101,7 +101,7 @@ can safely compose.
 
 ### Why `IGameDriver` is the heart of it
 
-`IGameDriver` is deliberately tiny — ten members, no vendor types:
+`IGameDriver` is deliberately tiny — nine members, no vendor types:
 
 ```csharp
 Task Connect();
@@ -233,8 +233,9 @@ every tap and drag. Each subclass supplies four members — where a target is on
 what is topmost at a point, and two hint strings for failures.
 
 **Taps are refused, not faked.** A tap fails if the target is disabled, off screen, or
-covered by something else — rather than invoking the handler directly. That is the
-difference between testing the game and testing the game *with* the game. The 3D
+covered by something else — rather than invoking the handler directly. Calling the
+handler would only prove the code behind the button works, not that a player could
+press it. The 3D
 sample exists specifically to demonstrate it: the vault's own rules permit taking the
 key at any time, and only geometry prevents it, so the refusal can come from nowhere
 but the driver's raycast.
@@ -381,7 +382,8 @@ memory and lost on restart.
 > Never actually done — see the last row of the verification table. This is the intended
 > shape, not a walkthrough anyone has followed.
 
-1. Add the package (git URL with `?path=TestGoblin-Dev/Packages/com.routaz.testgoblin`).
+1. Add the package from git URL:
+   `https://github.com/routaz/TestGoblin.git?path=/TestGoblin-Dev/Packages/com.routaz.testgoblin`
 2. Add `"com.routaz.testgoblin"` to `"testables"` in `Packages/manifest.json`, or the
    scenario runner will not be discovered.
 3. Write your **Screens** — one per screen of your game, each owning its locators as
@@ -540,9 +542,6 @@ out-of-process tier would be written, at the honest cost recorded in the table a
 ├── ci/
 │   ├── run-suite.sh                # full clean-state suite (this repo's own harness)
 │   └── github-actions-example.yml  # two-tier pipeline snippet
-├── docs/
-│   ├── ai-usage-notes.md
-│   └── roadmap.md
 ├── tools/                          # NOT part of the Unity project — plain .NET
 │   ├── testgoblin.cmd
 │   └── TestGoblin.Server/          # local control server + browser UI
@@ -575,8 +574,6 @@ Two placement rules the layout enforces rather than describes:
 3. `[Category]` tagging so tiers can run different subsets.
 4. A licensed AltTester device run, which would put the out-of-process tier back under a
    compiler.
-
-See [`docs/roadmap.md`](docs/roadmap.md) for the fuller list.
 
 ---
 
