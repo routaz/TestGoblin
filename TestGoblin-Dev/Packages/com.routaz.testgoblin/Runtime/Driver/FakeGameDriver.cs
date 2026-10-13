@@ -41,12 +41,12 @@ namespace Routaz.TestGoblin.Runtime.Driver
 
         public Task Connect()
         {
-            return Task.CompletedTask; //Simulate a successful connection
+            return Task.CompletedTask;
         }
 
         public Task Disconnect()
         {
-            return Task.CompletedTask; //Simulate a successful disconnection
+            return Task.CompletedTask;
         }
 
         public Task Drag(GoblinObject sourceObject, GoblinObject destinationObject)

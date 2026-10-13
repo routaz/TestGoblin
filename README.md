@@ -582,4 +582,4 @@ See [`docs/roadmap.md`](docs/roadmap.md) for the fuller list.
 
 ## Licence
 
-MIT.
+MIT - see [LICENSE](LICENSE).

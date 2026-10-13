@@ -36,6 +36,7 @@ framework with an in-process default driver. Several changes are breaking; see
   driver and a backend implementation, not test scaffolding, and a consumer needs
   them to test their own Screens with no game attached.
 - Dependency on `com.unity.ugui`, which the in-process driver requires.
+- `LICENSE.md` (MIT) in the package; `package.json` now declares `"license": "MIT"`.
 
 ### Changed
 - **Breaking — `IGameDriver.Connect()` takes no arguments.** It previously took a
@@ -65,6 +66,8 @@ framework with an in-process default driver. Several changes are breaking; see
   `#if ALTTESTER_PRESENT` as a worked example of the out-of-process tier, but nothing
   compiles it. An MIT package linking GPL-3 assemblies for a tier it cannot exercise
   was carrying a licensing question it did not need to answer.
+- Comments that restated the code (rationale comments and XML API docs are unchanged).
+- Committed IDE settings (`.idea/`) and the `test-results/` CI output folder; both are now git-ignored.
 
 ### Fixed
 - **`Waits` no longer uses `ConfigureAwait(false)`.** Discarding the synchronization

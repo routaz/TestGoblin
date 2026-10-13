@@ -122,3 +122,9 @@ TestGoblin-Dev/Assets/Scenes/Vault3D.unity*
 # folder holds authored test cases and belongs in version control — it is ignored only
 # because in this repository its contents are copies of sample files.
 TestGoblin-Dev/TestGoblin/
+
+# JetBrains Rider / IntelliJ project settings (any folder)
+.idea/
+
+# CI / local suite output (ci/run-suite.sh)
+/test-results/

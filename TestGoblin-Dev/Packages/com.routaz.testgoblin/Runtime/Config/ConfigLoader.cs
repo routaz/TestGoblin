@@ -59,7 +59,6 @@ namespace Routaz.TestGoblin.Runtime.Config
             // configuration, because only it knows whether one is meaningful.
         }
 
-        //HELPER METHODS
         private static string GetStringOrDefault(string envVarName, string defaultValue)
         {
             string value = Environment.GetEnvironmentVariable(EnvVarPrefix + envVarName);
